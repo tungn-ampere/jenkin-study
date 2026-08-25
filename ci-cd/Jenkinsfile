@@ -1,23 +1,37 @@
 pipeline{
     agent any
     stages {
-        stage('Hello'){
+        stage('Checkout scm'){
             steps {
-                echo "Hello Jenkins"
+                checkout scm
             }
         }
 
-        stage("System Info"){
+        stage("Show Source"){
             steps {
-                sh 'pwd'
-                sh 'whoami'
-                sh 'git --version'
+                sh '''
+                    echo "Current directory:"
+                    pwd
+                '''
             }
         }
         
-        stage("Finish"){
+        stage("Install Dependencies"){
             steps {
-                echo 'Pipeline finished'
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    python -m pip install --upgrade pip
+                    pip install -r requiremenst.txt
+                '''
+            }
+        }
+
+        stage("Test"){
+            steps{
+                sh '''
+                    pytest -v ci-cd/app
+                '''
             }
         }
     }
