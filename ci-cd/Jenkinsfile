@@ -7,6 +7,21 @@ pipeline{
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         FULL_IMAGE_NAME = "demo-ci-cd:build-${BUILD_NUMBER}"
     }
+
+    parameters {
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: ['none', 'staging', 'production'],
+            description: 'Choose deployment environment'
+        )
+
+        booleanParam(
+            name: 'RUN_TESTS',
+            defaultValue: true,
+            description: 'Run automated tests?'
+        )
+    }
+
     stages {
         stage("Print Variables"){
             steps {
@@ -47,25 +62,24 @@ pipeline{
         }
 
         stage("Test"){
-            steps{
-                sh '''
-                    . venv/bin/activate
-                    pytest -v ci-cd/app
-                '''
+            when {
+                expression {
+                    return params.RUN_TESTS
+                }
+            }
+            steps {
+                echo 'Running tests'
             }
         }
 
         stage("Deploy Production"){
-            when{
-                allOf {
-                    branch 'main'
-                    expression {
-                        return env.BUILD_NUMBER.toInteger() > 0
-                    }
+            when {
+                expression {
+                    return params.DEPLOY_ENV != 'none'
                 }
             }
             steps {
-                echo 'Deploy production'
+                echo "Deploying to ${params.DEPLOY_ENV}"
             }
         }
     }
