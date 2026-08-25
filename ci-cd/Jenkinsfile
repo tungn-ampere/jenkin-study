@@ -22,7 +22,7 @@ pipeline {
                     . venv/bin/activate
 
                     python -m pip install --upgrade pip
-                    pip install -r requirements.txt
+                    pip install -r ci-cd/requirements.txt
                 '''
             }
         }
@@ -33,7 +33,7 @@ pipeline {
                     set -eux
 
                     . venv/bin/activate
-                    pytest -v app --junitxml=test-results.xml
+                    pytest -v ci-cd/app --junitxml=test-results.xml
                 '''
             }
 
@@ -72,6 +72,29 @@ pipeline {
                 }
             }
         }
+
+        stage('Run Container') {
+            steps {
+                dir ('ci-cd'){
+                    sh '''
+                        docker rm -rf demo-app || true
+                        docker run -d \
+                            --name demo-app \
+                            -p 5000:5000 \
+                            ${IMAGE_NAME}:${IMAGE_TAG}
+                        sleep 3
+                    '''
+                }
+            }
+        }
+
+        stage ("Smoke Test"){
+            steps {
+                sh '''
+                    curl -f http://10.40.181.48:5000/health
+                '''
+            }
+        }
     }
 
     post {
@@ -81,6 +104,10 @@ pipeline {
 
         failure {
             echo "Pipeline failed"
+        }
+
+        always {
+            sh 'docker rm -f demo-app || true'
         }
     }
 }
