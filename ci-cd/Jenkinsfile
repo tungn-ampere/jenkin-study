@@ -5,7 +5,7 @@ pipeline{
         APP_NAME= "demo-ci-cd"
         TEST_IMAGE="demo-ci-cd:test"
         IMAGE_TAG = "build-${BUILD_NUMBER}"
-        FULL_IMAGE_NAME = "demo-ci-cd:build-${BUILD_NUMBER}"
+        IMAGE_NAME = "demo-ci-cd:build-${BUILD_NUMBER}"
     }
 
     parameters {
@@ -27,14 +27,14 @@ pipeline{
             steps {
                 echo "Application: ${APP_NAME}"
                 echo "Build number: ${BUILD_NUMBER}" 
-                echo "Image: ${FULL_IMAGE_NAME}"
+                echo "Image: ${IMAGE_NAME}"
                 sh '''
                     echo "APP_NAME=$APP_NAME"
                     echo "WORKSPACE=$WORKSPACE"
                 '''
             }
         }
-
+:
         stage('Checkout scm'){
             steps {
                 checkout scm
@@ -69,18 +69,41 @@ pipeline{
             }
             steps {
                 echo 'Running tests'
+                sh '''
+                    . venv/bin/activate
+                    pytest -v app
+                '''
             }
         }
 
-        stage("Deploy Production"){
-            when {
-                expression {
-                    return params.DEPLOY_ENV != 'none'
-                }
-            }
+        stage("Build Docker Image"){
             steps {
-                echo "Deploying to ${params.DEPLOY_ENV}"
+                sh '''
+                    docker build \
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                        -t ${IMAGE_NAME}:latest \
+                        .
+                '''
             }
         }
+
+        stage("show Images"){
+            steps {
+                sh '''
+                    docker images ${IMAGE_NAME}
+                '''
+            }
+        }
+
+        // stage("Deploy Production"){
+        //     when {
+        //         expression {
+        //             return params.DEPLOY_ENV != 'none'
+        //         }
+        //     }
+        //     steps {
+        //         echo "Deploying to ${params.DEPLOY_ENV}"
+        //     }
+        // }
     }
 }
