@@ -125,6 +125,19 @@ pipeline {
                 }
             }
         }
+        stage ("Approval"){
+            when {
+                branch 'main'
+            }
+            steps {
+                timeout(time: 10, unit: 'SECONDS') {
+                    input(
+                        message: 'Deploy to production?',
+                        ok: 'Deploy'
+                    )
+                }
+            }
+        }
     }
 
     post {
