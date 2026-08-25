@@ -125,16 +125,28 @@ pipeline {
                 }
             }
         }
-        stage ("Approval"){
-            when {
-                branch 'main'
-            }
+        stage ("Approval"){ 
             steps {
-                timeout(time: 10, unit: 'SECONDS') {
+                timeout(time: 10, unit: 'MINUTES') {
                     input(
                         message: 'Deploy to production?',
                         ok: 'Deploy'
                     )
+                }
+            }
+        }
+        stage('Create Artifact') {
+            steps {
+                sh '''
+                    mkdir -p dist
+                    echo "Application build ${BUILD_NUMBER}" > dist/build-info.txt
+                    tar -czf dist/demo-ci-cd.tar.gz ci-cd/app ci-cd/requirements.txt
+                '''
+            }
+
+            post {
+                success {
+                    archiveArtifacts artifacts: 'dist/**', fingerprint: true
                 }
             }
         }
