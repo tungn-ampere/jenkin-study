@@ -57,17 +57,19 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    set -eux
+                dir('ci-cd'){
+                    sh '''
+                        set -eux
 
-                    echo "Building image:"
-                    echo "${IMAGE_NAME}:${IMAGE_TAG}"
+                        echo "Building image:"
+                        echo "${IMAGE_NAME}:${IMAGE_TAG}"
 
-                    docker build \
-                        -t "${IMAGE_NAME}:${IMAGE_TAG}" \
-                        -t "${IMAGE_NAME}:latest" \
-                        .
-                '''
+                        docker build \
+                            -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+                            -t "${IMAGE_NAME}:latest" \
+                            .
+                    '''
+                }
             }
         }
     }
