@@ -34,7 +34,7 @@ pipeline{
                 '''
             }
         }
-:
+
         stage('Checkout scm'){
             steps {
                 checkout scm
