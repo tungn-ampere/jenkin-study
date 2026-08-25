@@ -95,6 +95,36 @@ pipeline {
                 '''
             }
         }
+        stage('Quality Checks') {
+            parallel {
+                stage('Unit Test') {
+                    steps {
+                        sh '''
+                            . venv/bin/activate
+                            pytest -v ci-cd/app
+                        '''
+                    }
+                }
+
+                stage('Check Python Syntax') {
+                    steps {
+                        sh '''
+                            python3 -m py_compile ci-cd/app/main.py
+                            python3 -m py_compile ci-cd/app/test_main.py
+                        '''
+                    }
+                }
+
+                stage('Check Files') {
+                    steps {
+                        sh '''
+                            test -f ci-cd/Dockerfile
+                            test -f ci-cd/requirements.txt
+                        '''
+                    }
+                }
+            }
+        }
     }
 
     post {
