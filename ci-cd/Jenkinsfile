@@ -1,109 +1,84 @@
-pipeline{
+pipeline {
     agent any
 
     environment {
-        APP_NAME= "demo-ci-cd"
-        TEST_IMAGE="demo-ci-cd:test"
+        IMAGE_NAME = 'demo-ci-cd'
         IMAGE_TAG = "build-${BUILD_NUMBER}"
-        IMAGE_NAME = "demo-ci-cd:build-${BUILD_NUMBER}"
-    }
-
-    parameters {
-        choice(
-            name: 'DEPLOY_ENV',
-            choices: ['none', 'staging', 'production'],
-            description: 'Choose deployment environment'
-        )
-
-        booleanParam(
-            name: 'RUN_TESTS',
-            defaultValue: true,
-            description: 'Run automated tests?'
-        )
     }
 
     stages {
-        stage("Print Variables"){
-            steps {
-                echo "Application: ${APP_NAME}"
-                echo "Build number: ${BUILD_NUMBER}" 
-                echo "Image: ${IMAGE_NAME}"
-                sh '''
-                    echo "APP_NAME=$APP_NAME"
-                    echo "WORKSPACE=$WORKSPACE"
-                '''
-            }
-        }
-
-        stage('Checkout scm'){
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage("Show Source"){
+        stage('Install Dependencies') {
             steps {
                 sh '''
-                    echo "Current directory:"
-                    pwd
-                '''
-            }
-        }
-        
-        stage("Install Dependencies"){
-            steps {
-                sh '''
+                    set -eux
+
                     python3 -m venv venv
                     . venv/bin/activate
+
                     python -m pip install --upgrade pip
-                    pip install -r ci-cd/requirements.txt
+                    pip install -r requirements.txt
                 '''
             }
         }
 
-        stage("Test"){
-            when {
-                expression {
-                    return params.RUN_TESTS
+        stage('Unit Test') {
+            steps {
+                sh '''
+                    set -eux
+
+                    . venv/bin/activate
+                    pytest -v app --junitxml=test-results.xml
+                '''
+            }
+
+            post {
+                always {
+                    junit 'test-results.xml'
                 }
             }
+        }
+
+        stage('Check Docker') {
             steps {
-                echo 'Running tests'
                 sh '''
-                    . venv/bin/activate
-                    pytest -v app
+                    set -eux
+
+                    docker --version
+                    docker info
                 '''
             }
         }
 
-        stage("Build Docker Image"){
+        stage('Build Docker Image') {
             steps {
                 sh '''
+                    set -eux
+
+                    echo "Building image:"
+                    echo "${IMAGE_NAME}:${IMAGE_TAG}"
+
                     docker build \
-                        -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                        -t ${IMAGE_NAME}:latest \
+                        -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+                        -t "${IMAGE_NAME}:latest" \
                         .
                 '''
             }
         }
+    }
 
-        stage("show Images"){
-            steps {
-                sh '''
-                    docker images ${IMAGE_NAME}
-                '''
-            }
+    post {
+        success {
+            echo "Pipeline succeeded"
         }
 
-        // stage("Deploy Production"){
-        //     when {
-        //         expression {
-        //             return params.DEPLOY_ENV != 'none'
-        //         }
-        //     }
-        //     steps {
-        //         echo "Deploying to ${params.DEPLOY_ENV}"
-        //     }
-        // }
+        failure {
+            echo "Pipeline failed"
+        }
     }
 }
