@@ -1,6 +1,25 @@
 pipeline{
     agent any
+
+    environment {
+        APP_NAME= "demo-ci-cd"
+        TEST_IMAGE="demo-ci-cd:test"
+        IMAGE_TAG = "build-${BUILD_NUMBER}"
+        FULL_IMAGE_NAME = "demo-ci-cd:build-${BUILD_NUMBER}"
+    }
     stages {
+        stage("Print Variables"){
+            steps {
+                echo "Application: ${APP_NAME}"
+                echo "Build number: ${BUILD_NUMBER}" 
+                echo "Image: ${FULL_IMAGE_NAME}"
+                sh '''
+                    echo "APP_NAME=$APP_NAME"
+                    echo "WORKSPACE=$WORKSPACE"
+                '''
+            }
+        }
+
         stage('Checkout scm'){
             steps {
                 checkout scm
@@ -22,7 +41,7 @@ pipeline{
                     python3 -m venv venv
                     . venv/bin/activate
                     python -m pip install --upgrade pip
-                    pip install -r requirements.txt
+                    pip install -r ci-cd/requirements.txt
                 '''
             }
         }
