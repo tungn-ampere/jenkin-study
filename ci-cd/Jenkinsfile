@@ -49,8 +49,23 @@ pipeline{
         stage("Test"){
             steps{
                 sh '''
+                    . venv/bin/activate
                     pytest -v ci-cd/app
                 '''
+            }
+        }
+
+        stage("Deploy Production"){
+            when{
+                allOf {
+                    branch 'main'
+                    expression {
+                        return env.BUILD_NUMBER.toInteger() > 0
+                    }
+                }
+            }
+            steps {
+                echo 'Deploy production'
             }
         }
     }
